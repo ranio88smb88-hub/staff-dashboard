@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Izin Keluar - Staff Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="css/style.css" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <!-- Sidebar (sama seperti dashboard) -->
+        <div class="sidebar bg-blue-800 text-white w-64 space-y-6 py-7 px-2">
+            <!-- ... sama seperti di dashboard.html ... -->
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-y-auto">
+            <header class="bg-white shadow-sm py-4 px-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-800">Izin Keluar</h1>
+                    <div class="flex items-center space-x-4">
+                        <div id="clock" class="text-lg font-semibold text-gray-700"></div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="p-6">
+                <!-- Izin Status Card -->
+                <div class="mb-6">
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">Status Izin Anda</h3>
+                                <p class="text-gray-600">Izin hari ini: <span id="izin-count" class="font-bold">0</span>/<span id="max-izin">4</span></p>
+                            </div>
+                            <div id="izin-status" class="px-4 py-2 rounded-lg">
+                                <!-- Status akan diupdate oleh JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Izin Controls -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Izin Keluar -->
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="p-3 bg-blue-100 rounded-lg mr-4">
+                                <i class="fas fa-sign-out-alt text-blue-600 text-2xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">Izin Keluar</h3>
+                                <p class="text-gray-600">Durasi: <span id="durasi-keluar">15:59</span> menit</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-gray-700 mb-2">Alasan Izin</label>
+                                <select id="alasan-keluar" class="w-full px-4 py-2 border rounded-lg">
+                                    <option value="keperluan pribadi">Keperluan Pribadi</option>
+                                    <option value="telepon penting">Telepon Penting</option>
+                                    <option value="lainnya">Lainnya</option>
+                                </select>
+                            </div>
+                            
+                            <div id="izin-keluar-info" class="p-4 bg-blue-50 rounded-lg hidden">
+                                <p class="text-blue-800 text-sm"></p>
+                            </div>
+                            
+                            <button id="btn-izin-keluar" 
+                                    class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Ajukan Izin Keluar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Izin Makan -->
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="p-3 bg-green-100 rounded-lg mr-4">
+                                <i class="fas fa-utensils text-green-600 text-2xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">Izin Makan</h3>
+                                <p class="text-gray-600">Durasi: <span id="durasi-makan">7:00</span> menit</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-gray-700 mb-2">Waktu Makan</label>
+                                <select id="waktu-makan" class="w-full px-4 py-2 border rounded-lg">
+                                    <option value="siang">Siang</option>
+                                    <option value="malam">Malam</option>
+                                </select>
+                            </div>
+                            
+                            <div id="izin-makan-info" class="p-4 bg-green-50 rounded-lg hidden">
+                                <p class="text-green-800 text-sm"></p>
+                            </div>
+                            
+                            <button id="btn-izin-makan" 
+                                    class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="fas fa-utensils mr-2"></i>Ajukan Izin Makan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Izin Timer -->
+                <div id="active-izin-container" class="hidden">
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="text-lg font-semibold text-yellow-800">Izin Aktif</h3>
+                                <p class="text-yellow-700">Anda sedang dalam waktu izin</p>
+                                <p class="text-sm text-yellow-600" id="izin-alasan"></p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-3xl font-bold text-yellow-700 mb-2" id="izin-timer">00:00</div>
+                                <p class="text-sm text-yellow-600">Sisa waktu</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button id="btn-kembali-kerja" 
+                                    class="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition duration-300">
+                                <i class="fas fa-sign-in-alt mr-2"></i>Kembali Bekerja
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Izin -->
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="px-6 py-4 border-b">
+                        <h3 class="text-lg font-semibold text-gray-800">Riwayat Izin Hari Ini</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durasi</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="izin-history" class="divide-y divide-gray-200">
+                                <!-- Data akan diisi oleh JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/izin.js"></script>
+    <script src="js/utils.js"></script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pengaturan - Staff Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="css/style.css" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <!-- Sidebar (sama seperti dashboard) -->
+        <div class="sidebar bg-blue-800 text-white w-64 space-y-6 py-7 px-2">
+            <!-- ... sama seperti di dashboard.html ... -->
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-y-auto">
+            <header class="bg-white shadow-sm py-4 px-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-800">Pengaturan Admin</h1>
+                    <div class="flex items-center space-x-4">
+                        <div id="clock" class="text-lg font-semibold text-gray-700"></div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="p-6">
+                <!-- Admin Only Warning -->
+                <div id="admin-only-warning" class="mb-6 p-6 bg-red-50 border border-red-200 rounded-xl hidden">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-2xl mr-4"></i>
+                        <div>
+                            <h3 class="font-semibold text-red-800">Akses Ditolak</h3>
+                            <p class="text-red-700">Halaman ini hanya dapat diakses oleh Admin.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Content (hanya muncul untuk admin) -->
+                <div id="settings-content" class="space-y-6">
+                    <!-- General Settings -->
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-6">Pengaturan Umum</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-gray-700 mb-2">Nama Perusahaan</label>
+                                <input type="text" id="nama-perusahaan" 
+                                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 mb-2">URL Logo Perusahaan</label>
+                                <input type="text" id="logo-url" 
+                                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                       placeholder="https://example.com/logo.png">
+                                <p class="text-sm text-gray-500 mt-1">Support PNG, JPG, SVG</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 mb-2">Session Timeout (menit)</label>
+                                <input type="number" id="session-timeout" min="1" max="1440"
+                                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <p class="text-sm text-gray-500 mt-1">Default: 480 menit (8 jam)</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 mb-2">Maksimal Izin per Hari</label>
+                                <input type="number" id="max-izin" min="1" max="20"
+                                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Izin Settings -->
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-6">Pengaturan Izin</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-gray-700 mb-2">Durasi Izin Keluar (detik)</label>
+                                <input type="number" id="durasi-keluar" min="60" max="3600"
+                                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <p class="text-sm text-gray-500 mt-1">15 menit 59 detik = 959 detik</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 mb-2">Durasi Izin Makan (detik)</label>
+                                <input type="number" id="durasi-makan" min="60" max="3600"
+                                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <p class="text-sm text-gray-500 mt-1">7 menit = 420 detik</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 mb-2">Izin Bersamaan</label>
+                                <select id="allow-concurrent" class="w-full px-4 py-2 border rounded-lg">
+                                    <option value="true">Diperbolehkan</option>
+                                    <option value="false">Tidak Diperbolehkan</option>
+                                </select>
+                                <p class="text-sm text-gray-500 mt-1">Apakah staff dengan jobdesk sama boleh izin bersamaan?</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aturan Sanksi -->
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-6">Aturan Sanksi</h3>
+                        
+                        <div>
+                            <label class="block text-gray-700 mb-2">Aturan Sanksi Keterlambatan</label>
+                            <textarea id="aturan-sanksi" rows="6"
+                                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                      placeholder="Tulis aturan sanksi di sini..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-end space-x-4">
+                        <button id="btn-reset" 
+                                class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            Reset ke Default
+                        </button>
+                        <button id="btn-save" 
+                                class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Simpan Pengaturan
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/utils.js"></script>
+</body>
+</html>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Izin - Staff Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="css/style.css" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar bg-blue-800 text-white w-64 space-y-6 py-7 px-2">
+            <div class="flex items-center justify-center space-x-2 mb-8">
+                <img id="sidebar-logo" src="assets/logo.png" alt="Logo" class="w-10 h-10 rounded-full">
+                <h2 id="sidebar-company" class="text-xl font-bold">Dashboard</h2>
+            </div>
+            
+            <nav>
+                <a href="dashboard.html" class="nav-link">
+                    <i class="fas fa-home mr-3"></i>Dashboard
+                </a>
+                <a href="izin.html" class="nav-link">
+                    <i class="fas fa-sign-out-alt mr-3"></i>Izin Keluar
+                </a>
+                <a href="logs.html" class="nav-link active">
+                    <i class="fas fa-history mr-3"></i>Log Izin
+                </a>
+                <a href="settings.html" id="settings-link" class="nav-link hidden">
+                    <i class="fas fa-cog mr-3"></i>Pengaturan
+                </a>
+                <button onclick="authManager.logout()" class="nav-link logout-btn">
+                    <i class="fas fa-sign-out-alt mr-3"></i>Logout
+                </button>
+            </nav>
+            
+            <div class="absolute bottom-0 left-0 right-0 p-4 bg-blue-900">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-sm"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p id="user-name" class="text-sm font-medium"></p>
+                        <p id="user-role" class="text-xs text-blue-300"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-y-auto">
+            <!-- Header -->
+            <header class="bg-white shadow-sm py-4 px-6">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-800">Log Izin Staff</h1>
+                    <div class="flex items-center space-x-4">
+                        <div id="clock" class="text-lg font-semibold text-gray-700"></div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="p-6">
+                <!-- Filter Controls -->
+                <div class="bg-white rounded-xl shadow p-6 mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Filter Log Izin</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <!-- Tanggal Mulai -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 text-sm">Tanggal Mulai</label>
+                            <input type="date" id="filter-start-date" 
+                                   class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <!-- Tanggal Selesai -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 text-sm">Tanggal Selesai</label>
+                            <input type="date" id="filter-end-date" 
+                                   class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <!-- Staff Filter -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 text-sm">Staff</label>
+                            <select id="filter-staff" 
+                                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">Semua Staff</option>
+                                <!-- Options akan diisi oleh JavaScript -->
+                            </select>
+                        </div>
+                        
+                        <!-- Status Filter -->
+                        <div>
+                            <label class="block text-gray-700 mb-2 text-sm">Status</label>
+                            <select id="filter-status" 
+                                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">Semua Status</option>
+                                <option value="ACTIVE">Aktif</option>
+                                <option value="NORMAL">Normal</option>
+                                <option value="TELAT">Telat</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button id="btn-reset-filter" 
+                                class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                            Reset Filter
+                        </button>
+                        <button id="btn-apply-filter" 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Terapkan Filter
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-xl shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 bg-blue-100 rounded-lg">
+                                <i class="fas fa-clock text-blue-600 text-2xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm text-gray-600">Total Izin Hari Ini</p>
+                                <p id="total-today" class="text-2xl font-bold">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 bg-yellow-100 rounded-lg">
+                                <i class="fas fa-exclamation-triangle text-yellow-600 text-2xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm text-gray-600">Izin Aktif</p>
+                                <p id="active-izin" class="text-2xl font-bold">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 bg-red-100 rounded-lg">
+                                <i class="fas fa-history text-red-600 text-2xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm text-gray-600">Total Keterlambatan</p>
+                                <p id="total-telat" class="text-2xl font-bold">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log Table -->
+                <div class="bg-white rounded-xl shadow overflow-hidden">
+                    <div class="px-6 py-4 border-b flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-gray-800">Riwayat Izin</h3>
+                        <div class="flex items-center space-x-3">
+                            <button id="btn-export" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                                <i class="fas fa-file-export mr-2"></i>Export
+                            </button>
+                            <button id="btn-refresh" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                                <i class="fas fa-sync-alt mr-2"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Loading State -->
+                    <div id="loading-state" class="p-8 text-center">
+                        <div class="spinner mx-auto mb-4"></div>
+                        <p class="text-gray-600">Memuat data...</p>
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div id="empty-state" class="p-8 text-center hidden">
+                        <i class="fas fa-history text-4xl text-gray-300 mb-4"></i>
+                        <h4 class="text-lg font-medium text-gray-700 mb-2">Tidak ada data</h4>
+                        <p class="text-gray-500">Tidak ada riwayat izin ditemukan</p>
+                    </div>
+                    
+                    <!-- Table Container -->
+                    <div id="table-container" class="hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div class="flex items-center cursor-pointer" onclick="logsManager.sortBy('tanggal')">
+                                                Tanggal
+                                                <i id="sort-date" class="fas fa-sort ml-1"></i>
+                                            </div>
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div class="flex items-center cursor-pointer" onclick="logsManager.sortBy('nama')">
+                                                Staff
+                                                <i id="sort-name" class="fas fa-sort ml-1"></i>
+                                            </div>
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jobdesk</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durasi</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logs-table-body" class="divide-y divide-gray-200">
+                                    <!-- Data akan diisi oleh JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        <div class="px-6 py-4 border-t">
+                            <div class="flex justify-between items-center">
+                                <div class="text-sm text-gray-700">
+                                    Menampilkan <span id="pagination-from">0</span> - <span id="pagination-to">0</span> dari <span id="pagination-total">0</span> data
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button id="btn-prev" 
+                                            class="px-3 py-1 border rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                    <div class="flex space-x-1" id="pagination-numbers">
+                                        <!-- Page numbers akan diisi oleh JavaScript -->
+                                    </div>
+                                    <button id="btn-next" 
+                                            class="px-3 py-1 border rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-800">Detail Izin</h3>
+                <button onclick="logsManager.closeDetailModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h4 class="font-medium text-gray-700 mb-2">Informasi Staff</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-sm text-gray-500">Nama</p>
+                                <p id="detail-nama" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Jabatan</p>
+                                <p id="detail-jabatan" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Jobdesk</p>
+                                <p id="detail-jobdesk" class="font-medium"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-medium text-gray-700 mb-2">Informasi Izin</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-sm text-gray-500">Jenis Izin</p>
+                                <p id="detail-jenis" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Alasan</p>
+                                <p id="detail-alasan" class="font-medium"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Tanggal</p>
+                                <p id="detail-tanggal" class="font-medium"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600">Waktu Mulai</p>
+                        <p id="detail-mulai" class="text-lg font-bold text-blue-700"></p>
+                    </div>
+                    
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600">Waktu Selesai</p>
+                        <p id="detail-selesai" class="text-lg font-bold text-green-700"></p>
+                    </div>
+                    
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600">Durasi</p>
+                        <p id="detail-durasi" class="text-lg font-bold text-purple-700"></p>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h4 class="font-medium text-gray-700 mb-2">Status</h4>
+                    <div id="detail-status-badge" class="inline-block px-4 py-2 rounded-lg"></div>
+                    <p id="detail-status-desc" class="text-sm text-gray-600 mt-2"></p>
+                </div>
+                
+                <!-- Admin Actions -->
+                <div id="admin-actions" class="hidden">
+                    <div class="border-t pt-6">
+                        <h4 class="font-medium text-gray-700 mb-4">Aksi Admin</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center space-x-3">
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="mark-telat" class="rounded text-red-600">
+                                    <span class="ml-2 text-sm text-gray-700">Tandai sebagai telat</span>
+                                </label>
+                                <button onclick="logsManager.updateStatus()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">
+                                    Update Status
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500">Note: Status telat akan tercatat dalam riwayat dan mempengaruhi statistik</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 border-t flex justify-end">
+                <button onclick="logsManager.closeDetailModal()" 
+                        class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/logs.js"></script>
+    <script src="js/utils.js"></script>
+</body>
+</html>
